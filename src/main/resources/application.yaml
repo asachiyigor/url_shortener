@@ -13,6 +13,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
@@ -29,14 +30,16 @@ server:
 logging:
   level:
     root: info
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: WARN
+    org.hibernate.SQL: WARN
 
 url:
   shortener:
     hash:
-      batch-size: 10000
+      batch-size: 2000
     cache:
-      refill-threshold: 20
-      capacity: 10000
+      refill-threshold: 90
+      capacity: 20000
   validation:
     allowed-protocols: http,https
     max-length: 2048

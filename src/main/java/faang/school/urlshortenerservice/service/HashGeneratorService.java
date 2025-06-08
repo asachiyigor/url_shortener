@@ -1,6 +1,6 @@
 package faang.school.urlshortenerservice.service;
 
-import faang.school.urlshortenerservice.entiity.Hash;
+import faang.school.urlshortenerservice.entity.Hash;
 import faang.school.urlshortenerservice.repository.HashRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,44 +8,47 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
-import static java.util.stream.Collectors.toList;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class HashGeneratorService {
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int BASE = ALPHABET.length();
     private final HashRepository hashRepository;
 
     @Transactional
     public void generateHashesInternal(List<Long> sequences) {
-        if (sequences.isEmpty()) {
-            log.warn("No sequence values were generated!");
+        if (sequences == null || sequences.isEmpty()) {
+            log.warn("Не были предоставлены значения последовательностей для генерации хешей!");
             return;
         }
-
-        log.info("Sample sequence values: first={}, last={}",
+        log.info("Примеры значений последовательности: первое={}, последнее={}",
                 sequences.get(0), sequences.get(sequences.size() - 1));
-
         List<Hash> hashes = sequences.stream()
                 .map(seq -> {
-                    String hash = base62Encode(seq);
-                    log.debug("Generated hash {} for sequence {}", hash, seq);
+                    String hash = encodeToBase62(seq);
+                    log.debug("Сгенерирован хеш {} для последовательности {}", hash, seq);
                     return new Hash(hash);
                 })
-                .collect(toList());
-
-        log.info("Generated {} hashes, saving to database", hashes.size());
+                .collect(Collectors.toList());
+        log.info("Сгенерировано {} хешей, сохраняем в базу данных", hashes.size());
         var savedHashes = hashRepository.saveAll(hashes);
-        log.info("Successfully saved {} hashes to database", savedHashes.size());
+        log.info("Успешно сохранено {} хешей в базе данных", savedHashes.size());
     }
 
-    private String base62Encode(long value) {
+    private String encodeToBase62(long value) {
+        if (value == 0) {
+            return String.valueOf(ALPHABET.charAt(0));
+        }
+
         StringBuilder sb = new StringBuilder();
-        while (value > 0) {
-            sb.append(ALPHABET.charAt((int) (value % 62)));
-            value /= 62;
+        long remaining = value;
+        while (remaining > 0) {
+            int remainder = (int) (remaining % BASE);
+            sb.append(ALPHABET.charAt(remainder));
+            remaining /= BASE;
         }
         return sb.reverse().toString();
     }

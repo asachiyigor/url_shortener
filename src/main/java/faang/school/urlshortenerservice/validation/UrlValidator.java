@@ -46,18 +46,15 @@ public class UrlValidator {
 
         try {
             URL parsedUrl = new URL(url);
-
             if (!allowedProtocols.contains(parsedUrl.getProtocol())) {
                 log.debug("URL protocol '{}' is not allowed. Allowed protocols: {}",
                         parsedUrl.getProtocol(), allowedProtocols);
                 return false;
             }
-
             if (!urlPattern.matcher(url).matches()) {
                 log.debug("URL does not match required pattern: {}", url);
                 return false;
             }
-
             return true;
         } catch (MalformedURLException e) {
             log.debug("Invalid URL format: {}", url, e);

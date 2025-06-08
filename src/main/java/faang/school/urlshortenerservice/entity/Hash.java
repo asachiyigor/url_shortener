@@ -1,4 +1,4 @@
-package faang.school.urlshortenerservice.entiity;
+package faang.school.urlshortenerservice.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -20,8 +20,9 @@ public class Hash {
     @Column(nullable = false, unique = true, length = 6)
     private String value;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean used = false;
+    private HashStatus status = HashStatus.FREE;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

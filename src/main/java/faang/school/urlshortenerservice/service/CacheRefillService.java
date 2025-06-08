@@ -21,7 +21,7 @@ public class CacheRefillService {
         if (spaceAvailable <= 0) {
             return Collections.emptyList();
         }
-        log.debug("Refilling cache. Space available: {}", spaceAvailable);
+        log.info("Пополнение кэша. Доступное пространство: {}", spaceAvailable);
         return hashGenerator.getAvailableHashes(spaceAvailable);
     }
 

@@ -29,6 +29,8 @@ dependencies {
     implementation("com.github.ben-manes.caffeine:caffeine")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
+    implementation("com.google.guava:guava:11.0.2")
+
     /**
      * Database
      */

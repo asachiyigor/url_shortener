@@ -1,34 +1,31 @@
 package faang.school.urlshortenerservice.service;
 
 import faang.school.urlshortenerservice.generator.HashGenerator;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Cache Refill Service Tests")
 class CacheRefillServiceTest {
-
-    @BeforeEach
-    void setUp() {
-        hashGenerator = mock(HashGenerator.class);
-        cacheRefillService = new CacheRefillService(hashGenerator);
-    }
 
     @Mock
     private HashGenerator hashGenerator;
@@ -36,78 +33,107 @@ class CacheRefillServiceTest {
     @InjectMocks
     private CacheRefillService cacheRefillService;
 
-    @Nested
-    @DisplayName("refillCache tests")
-    class RefillCacheTests {
-
-        @Test
-        @DisplayName("Should refill cache with available hashes")
-        void shouldRefillCache() {
-            int spaceAvailable = 5;
-            List<String> expectedHashes = Arrays.asList("abc123", "def456", "ghi789");
-            when(hashGenerator.getAvailableHashes(spaceAvailable)).thenReturn(expectedHashes);
-            List<String> result = cacheRefillService.refillCache(spaceAvailable);
-            assertThat(result)
-                    .hasSize(3)
-                    .containsExactlyElementsOf(expectedHashes);
-            verify(hashGenerator).getAvailableHashes(spaceAvailable);
-        }
-
-        @Test
-        @DisplayName("Should return empty list when no space available")
-        void shouldReturnEmptyListWhenNoSpace() {
-            int spaceAvailable = 0;
-            List<String> result = cacheRefillService.refillCache(spaceAvailable);
-            assertThat(result).isEmpty();
-            verify(hashGenerator, never()).getAvailableHashes(anyInt());
-        }
-
-        @Test
-        @DisplayName("Should return empty list for negative space")
-        void shouldReturnEmptyListForNegativeSpace() {
-            int spaceAvailable = -5;
-            List<String> result = cacheRefillService.refillCache(spaceAvailable);
-            assertThat(result).isEmpty();
-            verify(hashGenerator, never()).getAvailableHashes(anyInt());
-        }
-
-        @Test
-        @DisplayName("Should handle empty result from generator")
-        void shouldHandleEmptyResultFromGenerator() {
-            int spaceAvailable = 10;
-            when(hashGenerator.getAvailableHashes(spaceAvailable)).thenReturn(Collections.emptyList());
-            List<String> result = cacheRefillService.refillCache(spaceAvailable);
-            assertThat(result).isEmpty();
-            verify(hashGenerator).getAvailableHashes(spaceAvailable);
-        }
+    @Test
+    @DisplayName("Should return empty list when space available is zero")
+    void shouldReturnEmptyListWhenSpaceAvailableIsZero() {
+        int spaceAvailable = 0;
+        List<String> result = cacheRefillService.refillCache(spaceAvailable);
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(hashGenerator);
     }
 
-    @Nested
-    @DisplayName("generateNewHashes tests")
-    class GenerateNewHashesTests {
+    @Test
+    @DisplayName("Should return empty list when space available is negative")
+    void shouldReturnEmptyListWhenSpaceAvailableIsNegative() {
+        int spaceAvailable = -5;
+        List<String> result = cacheRefillService.refillCache(spaceAvailable);
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(hashGenerator);
+    }
 
-        @Test
-        @DisplayName("Should generate new hashes successfully")
-        void shouldGenerateNewHashes() {
-            CompletableFuture<Void> expectedFuture = CompletableFuture.completedFuture(null);
-            when(hashGenerator.generateHashes()).thenReturn(expectedFuture);
-            CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
-            assertThat(result).isEqualTo(expectedFuture);
-            verify(hashGenerator).generateHashes();
-        }
+    @Test
+    @DisplayName("Should successfully refill cache with available hashes when space is positive")
+    void shouldSuccessfullyRefillCacheWhenSpaceIsPositive() {
+        int spaceAvailable = 10;
+        List<String> expectedHashes = Arrays.asList("hash1", "hash2", "hash3");
+        when(hashGenerator.getAvailableHashes(spaceAvailable)).thenReturn(expectedHashes);
+        List<String> result = cacheRefillService.refillCache(spaceAvailable);
+        assertEquals(expectedHashes, result);
+        verify(hashGenerator).getAvailableHashes(spaceAvailable);
+    }
 
-        @Test
-        @DisplayName("Should handle generation failure")
-        void shouldHandleGenerationFailure() {
-            RuntimeException expectedException = new RuntimeException("Generation failed");
-            CompletableFuture<Void> failedFuture = new CompletableFuture<>();
-            failedFuture.completeExceptionally(expectedException);
-            when(hashGenerator.generateHashes()).thenReturn(failedFuture);
-            CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
-            assertThatThrownBy(result::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCause(expectedException);
-            verify(hashGenerator).generateHashes();
-        }
+    @Test
+    @DisplayName("Should return empty list when hash generator returns empty list")
+    void shouldReturnEmptyListWhenHashGeneratorReturnsEmptyList() {
+        int spaceAvailable = 5;
+        when(hashGenerator.getAvailableHashes(spaceAvailable)).thenReturn(Collections.emptyList());
+        List<String> result = cacheRefillService.refillCache(spaceAvailable);
+        assertTrue(result.isEmpty());
+        verify(hashGenerator).getAvailableHashes(spaceAvailable);
+    }
+
+    @Test
+    @DisplayName("Should handle large space available values correctly")
+    void shouldHandleLargeSpaceAvailableValuesCorrectly() {
+        int spaceAvailable = Integer.MAX_VALUE;
+        List<String> expectedHashes = Arrays.asList("hash1", "hash2");
+        when(hashGenerator.getAvailableHashes(spaceAvailable)).thenReturn(expectedHashes);
+        List<String> result = cacheRefillService.refillCache(spaceAvailable);
+        assertEquals(expectedHashes, result);
+        verify(hashGenerator).getAvailableHashes(spaceAvailable);
+    }
+
+    @Test
+    @DisplayName("Should propagate exception from hash generator during cache refill")
+    void shouldPropagateExceptionFromHashGeneratorDuringCacheRefill() {
+        int spaceAvailable = 10;
+        RuntimeException expectedException = new RuntimeException("Hash generation failed");
+        when(hashGenerator.getAvailableHashes(spaceAvailable)).thenThrow(expectedException);
+        RuntimeException actualException = assertThrows(RuntimeException.class,
+                () -> cacheRefillService.refillCache(spaceAvailable));
+        assertEquals(expectedException.getMessage(), actualException.getMessage());
+        verify(hashGenerator).getAvailableHashes(spaceAvailable);
+    }
+
+    @Test
+    @DisplayName("Should successfully generate new hashes asynchronously")
+    void shouldSuccessfullyGenerateNewHashesAsynchronously() {
+        CompletableFuture<Void> expectedFuture = CompletableFuture.completedFuture(null);
+        when(hashGenerator.generateHashes()).thenReturn(expectedFuture);
+        CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
+        assertSame(expectedFuture, result);
+        verify(hashGenerator).generateHashes();
+    }
+
+    @Test
+    @DisplayName("Should return completed future when hash generation succeeds")
+    void shouldReturnCompletedFutureWhenHashGenerationSucceeds() {
+        CompletableFuture<Void> completedFuture = CompletableFuture.completedFuture(null);
+        when(hashGenerator.generateHashes()).thenReturn(completedFuture);
+        CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
+        assertTrue(result.isDone());
+        assertFalse(result.isCompletedExceptionally());
+        verify(hashGenerator).generateHashes();
+    }
+
+    @Test
+    @DisplayName("Should return failed future when hash generation fails")
+    void shouldReturnFailedFutureWhenHashGenerationFails() {
+        RuntimeException exception = new RuntimeException("Generation failed");
+        CompletableFuture<Void> failedFuture = CompletableFuture.failedFuture(exception);
+        when(hashGenerator.generateHashes()).thenReturn(failedFuture);
+        CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
+        assertTrue(result.isDone());
+        assertTrue(result.isCompletedExceptionally());
+        verify(hashGenerator).generateHashes();
+    }
+
+    @Test
+    @DisplayName("Should handle null return from hash generator during async generation")
+    void shouldHandleNullReturnFromHashGeneratorDuringAsyncGeneration() {
+        when(hashGenerator.generateHashes()).thenReturn(null);
+        CompletableFuture<Void> result = cacheRefillService.generateNewHashes();
+        assertNull(result);
+        verify(hashGenerator).generateHashes();
     }
 }

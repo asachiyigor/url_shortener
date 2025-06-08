@@ -1,10 +1,10 @@
 package faang.school.urlshortenerservice.repository;
 
-import faang.school.urlshortenerservice.entiity.Hash;
-import faang.school.urlshortenerservice.entiity.Url;
+import faang.school.urlshortenerservice.entity.Url;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -24,11 +24,6 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
             """, nativeQuery = true)
     List<String> deleteExpiredAndReturnHashes(LocalDateTime currentTime);
 
-    @Query(value = """
-            UPDATE url 
-            SET visits_count = visits_count + 1 
-            WHERE hash_value = :hashValue 
-            RETURNING visits_count
-            """, nativeQuery = true)
-    Optional<Long> incrementVisitsCount(String hashValue);
+    @Query("SELECT u FROM Url u WHERE u.originalUrl = :originalUrl")
+    Optional<Url> findByOriginalUrl(@Param("originalUrl") String originalUrl);
 }

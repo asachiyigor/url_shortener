@@ -1,4 +1,4 @@
-package faang.school.urlshortenerservice.entiity;
+package faang.school.urlshortenerservice.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
